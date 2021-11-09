@@ -45,6 +45,14 @@ docker run --runtime=nvidia --gpus all -itd \
 
 ```
 
+### CPU Miner
+
+```sh
+docker run -it --rm --name cpuminer --net=host --privileged -e HOST_PERMS="$(id -u):$(id -g)" cpuminer   \
+ --url stratum+tcp://ltc.poolbinance.com:443 \
+ --user ubntscrpyt.001 --pass 123456
+```
+
 
 - https://github.com/pooler/cpuminer
 - https://www.awesomeminer.com/algorithm/scrypt
