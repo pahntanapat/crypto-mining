@@ -68,6 +68,12 @@ docker run -it --rm --name cpuminer --net=host --privileged -e HOST_PERMS="$(id 
 -p x -k
 ```
 ```sh
+./xmrig --cuda --cuda-loader=libxmrig-cuda.so --no-cpu \
+-a kawpow -o kp.unmineable.com:3333 \
+-u CAKE:0xfe80650bf12fb5b55f96eaa594e808aa9481da40.RTX2080Ti#q8xd-bq8c \
+-p x -k
+```
+```sh
 ./xmrig-cpu -t 24 \
 -o stratum+ssl://rx.unmineable.com:443 \
 -a rx \
