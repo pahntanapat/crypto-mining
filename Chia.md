@@ -1,7 +1,7 @@
 
 ```sh
 sudo mkfs.ext4 -m 0 -E lazy_itable_init=0,lazy_journal_init=0,discard /dev/sdb
-sudo mkfs.ext4 -m 0 -E lazy_itable_init=0,lazy_journal_init=0,discard /dev/nvme0n1
+sudo mkfs.ext4 -m 0 -E lazy_itable_init=0,lazy_journal_init=0,discard /dev/nvme0n4 &
 
 sudo lsblk
 
@@ -12,6 +12,12 @@ sudo blkid /dev/
 # UUID=----UUID--HERE-------- /mnt/nv ext4 discard,defaults,defaults 0 2
 sudo echo "/dev/nvme0n1 /mnt/nv ext4 discard,defaults,defaults 0 2" >> /etc/fstab
 cat /etc/fstab
+```
+```
+/dev/nvme0n4 /mnt/nv/0 ext4 discard,defaults,defaults 0 2
+/dev/nvme0n1 /mnt/nv/1 ext4 discard,defaults,defaults 0 2
+/dev/nvme0n2 /mnt/nv/2 ext4 discard,defaults,defaults 0 2
+/dev/nvme0n3 /mnt/nv/3 ext4 discard,defaults,defaults 0 2
 ```
 
 ## Mount Drive
@@ -135,9 +141,9 @@ do
     (sudo gsutil -o GSUtil:parallel_composite_upload_threshold=150M  mv -R $final/$name/$i/ $storage && \
         echo "uploaded to storage $name/$i : $(expr `date +%s` - $start_time) s") >> $final/$name/stat.txt 2>&1 &
 done
+sudo rm -r $tmp/$name/ &
 sudo gsutil -o GSUtil:parallel_composite_upload_threshold=150M  mv $final/$name/stat.txt $storage
-sudo rm -r $tmp/$name/
-sudo rm -r $final/$name/
+sudo rm -r $final/$name/ &
 fg
 fg
 fg
@@ -145,6 +151,67 @@ fg
 exit
 ```
 
+
+
+
+```sh
+. ./chia-blockchain/activate
+. ./activate
+ram=3840
+name="`date +%Y-%m-%dT%H-%M-%S.%NZ`" #  0/#date
+
+tmp="/mnt/nv/tmp"
+final="/mnt/nv/final"
+storage="gs://ch-us-west-1/$name/"
+parallel=1
+
+# sudo mkdir -m 777 -p $tmp/$name/
+
+for i in `seq 1 1000`
+do
+    mod=`expr $i % $(nproc)`
+    echo "$mod/$i"
+    
+    tmp="/mnt/nv/$mod/tmp"
+    final="/mnt/nv/$mod/final"
+    sudo mkdir -m 777 -p $final/$name/$i/
+    sudo mkdir -m 777 -p $tmp/$name/$i/
+    echo $final/$name/$i/
+    echo $tmp/$name/$i/
+    start_time=`date +%s`
+
+    if [ `expr $i % $(nproc)` -eq 0 ]
+    then
+        # do something
+        chia plots create -k 32 -n 1 -r $parallel -b $ram -t $tmp/$name/$i/ -d $final/$name/$i/ -e -x
+    
+        echo "$name/$i\tplot created\t`nproc`\t$ram\t$(expr `date +%s` - $start_time) s." >> /mnt/stat.txt 2>&1
+    
+        start_time=`date +%s`
+        (sudo gsutil -o GSUtil:parallel_composite_upload_threshold=150M  mv -R $final/$name/$i/ $storage && \
+            echo "uploaded to storage $name/$i : $(expr `date +%s` - $start_time) s") >> /mnt/stat.txt 2>&1 &
+        sudo rm -r  $tmp/$name/$i/  2>&1 &
+    else
+        (chia plots create -k 32 -n 1 -r $parallel -b $ram -t $tmp/$name/$i/ -d $final/$name/$i/ -e -x >> $final/$name/$i/log.txt) && \
+            (echo "$name/$i\tplot created\t`nproc`\t$ram\t$(expr `date +%s` - $start_time) s." >> /mnt/stat.txt) && \
+            start_time=`date +%s` && \
+            ( (sudo gsutil -o GSUtil:parallel_composite_upload_threshold=150M  mv -R $final/$name/$i/ $storage && \
+                echo "uploaded to storage $name/$i : $(expr `date +%s` - $start_time) s") >> /mnt/stat.txt 2>&1 & ) && \
+            (sudo rm -r  $tmp/$name/$i/) 2>&1 &
+    fi
+
+    
+    
+done
+sudo gsutil -o GSUtil:parallel_composite_upload_threshold=150M  mv /mnt/stat.txt $storage
+sudo rm -r $tmp/$name/
+sudo rm -r $final/$name/
+fg
+fg
+fg
+sudo shutdown -h
+# exit
+```
 
 ## Exp
 
