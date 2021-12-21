@@ -76,5 +76,6 @@ fg
 
 ## Compare result
 
- RAM | No. Parallel Plot | time 
- 4 | 1 | ... 
+ RAM (GB) | No. Parallel Plot | time 
+ --|--|--
+ 1 | 1 | ... 
